@@ -10,7 +10,7 @@ Aplicação de leilão de veículos construída com arquitetura de **Microfronte
 
 | Aplicação | Porta | Descrição |
 |-----------|-------|-----------|
-| `shell` | **3000** | Host application — orquestra os MFEs |
+| `shell` | **4000** | Host application — orquestra os MFEs |
 | `mfe-cadastro` | **3001** | Microfrontend de cadastro de veículos |
 | `mfe-leilao` | **3002** | Microfrontend de lance de leilão |
 
@@ -72,7 +72,7 @@ AULA_ARQSOL_MFE/
 ├── README.md
 ├── SPEC.md                   ← Especificação pedagógica do projeto
 │
-├── shell/                    ← Host application (port 3000)
+├── shell/                    ← Host application (port 4000)
 │   ├── src/
 │   │   ├── App.jsx           ← AppBar, Drawer, lazy load dos MFEs
 │   │   ├── main.jsx
@@ -176,11 +176,11 @@ Este comando usa `concurrently` para iniciar simultaneamente:
 
 ### Passo 4 — Acessar a aplicação
 
-Abra no navegador: **http://localhost:3000**
+Abra no navegador: **http://localhost:4000**
 
 | URL | Conteúdo |
 |-----|----------|
-| http://localhost:3000 | Shell — aplicação completa |
+| http://localhost:4000 | Shell — aplicação completa |
 | http://localhost:3001 | MFE Cadastro standalone |
 | http://localhost:3002 | MFE Leilão standalone |
 
