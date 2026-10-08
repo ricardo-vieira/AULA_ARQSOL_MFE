@@ -6,9 +6,12 @@
   "scripts": {
     "install:all": "npm install && npm install --prefix shell && npm install --prefix mfe-cadastro && npm install --prefix mfe-leilao",
     "build:remotes": "npm run build --prefix mfe-cadastro && npm run build --prefix mfe-leilao",
+    "build:all": "node scripts/build-prod.mjs",
+    "deploy:azure": "node scripts/deploy-azure.mjs",
     "start": "concurrently -n \"MFE-Cadastro,MFE-Leilao,Shell\" -c \"blue,yellow,green\" \"npm run preview --prefix mfe-cadastro\" \"npm run preview --prefix mfe-leilao\" \"npm run dev --prefix shell\""
   },
   "devDependencies": {
+    "@azure/storage-blob": "^12.34.0",
     "concurrently": "^8.2.2"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -23,6 +23,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -30,6 +31,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import GavelIcon from '@mui/icons-material/Gavel';
 import ClearIcon from '@mui/icons-material/Clear';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import {
+  INITIAL_VEHICLES,
+  cadastrarVeiculo,
+  excluirVeiculo,
+  listarVeiculos,
+} from '../services/veiculoService';
 
 // ── Dados de Domínio ──────────────────────────────────────────────────────────
 const TIPOS = ['Carro', 'SUV', 'Moto', 'Caminhão', 'Van', 'Pickup'];
@@ -40,42 +49,6 @@ const CORES = [
 const MARCAS = [
   'Chevrolet', 'Fiat', 'Volkswagen', 'Ford', 'Toyota',
   'Honda', 'Hyundai', 'Renault', 'Jeep', 'BMW', 'Mercedes-Benz', 'Outra',
-];
-
-const INITIAL_VEHICLES = [
-  {
-    id: 1,
-    marca: 'Chevrolet',
-    modelo: 'Onix',
-    ano: 2021,
-    placa: 'ABC-1234',
-    cor: 'Branco',
-    tipo: 'Carro',
-    valorMinimo: 45000,
-    descricao: 'Veículo em ótimo estado, apenas um dono.',
-  },
-  {
-    id: 2,
-    marca: 'Toyota',
-    modelo: 'Hilux',
-    ano: 2020,
-    placa: 'DEF-5678',
-    cor: 'Prata',
-    tipo: 'Pickup',
-    valorMinimo: 180000,
-    descricao: 'Caminhonete 4x4 com pouco uso.',
-  },
-  {
-    id: 3,
-    marca: 'Honda',
-    modelo: 'CB 500',
-    ano: 2022,
-    placa: 'GHI-9012',
-    cor: 'Preto',
-    tipo: 'Moto',
-    valorMinimo: 28000,
-    descricao: 'Moto em excelente estado, sem sinistro.',
-  },
 ];
 
 const EMPTY_FORM = {
@@ -96,11 +69,26 @@ const formatCurrency = (value) =>
 // ── Componente Principal ──────────────────────────────────────────────────────
 export default function CadastroVeiculo({ onAddVehicle }) {
   const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
+  const [isOnline, setIsOnline] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [deleteId, setDeleteId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // ── Carregar veículos do microsserviço ───────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    listarVeiculos().then(({ data, isOnline }) => {
+      if (mounted) {
+        setVehicles(data);
+        setIsOnline(isOnline);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // ── Validação ──────────────────────────────────────────────────────────────
   const validate = () => {
@@ -119,21 +107,23 @@ export default function CadastroVeiculo({ onAddVehicle }) {
   };
 
   // ── Cadastrar Veículo ──────────────────────────────────────────────────────
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const newVehicle = {
-      ...form,
-      id: Date.now(),
-      ano: Number(form.ano),
-      valorMinimo: Number(form.valorMinimo),
-    };
+    const result = await cadastrarVeiculo(form);
+    setVehicles((prev) => [...prev, result.data]);
+    setIsOnline(result.isOnline);
 
-    setVehicles((prev) => [...prev, newVehicle]);
-    if (onAddVehicle) onAddVehicle(newVehicle);
+    if (onAddVehicle) onAddVehicle(result.data);
     handleClear();
-    setSnackbar({ open: true, message: 'Veículo cadastrado com sucesso!', severity: 'success' });
+    setSnackbar({
+      open: true,
+      message: result.isOnline
+        ? 'Veículo salvo no Microsserviço de Veículos (Spring Boot :8081)!'
+        : 'Veículo cadastrado no estado local (Modo Demonstração Offline).',
+      severity: result.isOnline ? 'success' : 'info',
+    });
   };
 
   const handleClear = () => {
@@ -147,7 +137,8 @@ export default function CadastroVeiculo({ onAddVehicle }) {
     setDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
+    await excluirVeiculo(deleteId);
     setVehicles((prev) => prev.filter((v) => v.id !== deleteId));
     setDialogOpen(false);
     setSnackbar({ open: true, message: 'Veículo removido do cadastro.', severity: 'info' });
@@ -157,11 +148,31 @@ export default function CadastroVeiculo({ onAddVehicle }) {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* Cabeçalho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
-        <DirectionsCarIcon color="primary" sx={{ fontSize: 36 }} />
-        <Typography variant="h4" fontWeight="bold" color="text.primary">
-          Cadastro de Veículos
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <DirectionsCarIcon color="primary" sx={{ fontSize: 36 }} />
+          <Typography variant="h4" fontWeight="bold" color="text.primary">
+            Cadastro de Veículos
+          </Typography>
+        </Box>
+
+        <Tooltip
+          title={
+            isOnline
+              ? 'Conectado diretamente à API REST veiculos-service (:8081)'
+              : 'Microsserviço offline — operando com dados mock locais'
+          }
+          arrow
+        >
+          <Chip
+            icon={isOnline ? <CloudDoneIcon fontSize="small" /> : <CloudOffIcon fontSize="small" />}
+            label={isOnline ? 'Microsserviço REST :8081 Online' : 'Modo Fallback Offline'}
+            color={isOnline ? 'success' : 'default'}
+            variant={isOnline ? 'filled' : 'outlined'}
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+        </Tooltip>
       </Box>
 
       {/* ── Formulário ── */}

@@ -17,6 +17,7 @@ import {
   Paper,
   Snackbar,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -25,87 +26,13 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-
-// ── Dados Iniciais ────────────────────────────────────────────────────────────
-const INITIAL_VEHICLES = [
-  {
-    id: 1,
-    marca: 'Chevrolet',
-    modelo: 'Onix',
-    ano: 2021,
-    placa: 'ABC-1234',
-    cor: 'Branco',
-    tipo: 'Carro',
-    valorMinimo: 45000,
-    descricao: 'Veículo em ótimo estado, apenas um dono. Placa par, revisões em dia.',
-    lanceAtual: 45000,
-    totalLances: 0,
-    bids: [],
-    tempoRestante: 3600,
-    status: 'ativo',
-  },
-  {
-    id: 2,
-    marca: 'Toyota',
-    modelo: 'Hilux',
-    ano: 2020,
-    placa: 'DEF-5678',
-    cor: 'Prata',
-    tipo: 'Pickup',
-    valorMinimo: 180000,
-    descricao: 'Caminhonete 4x4 com pouco uso. Segundo dono, documentação ok.',
-    lanceAtual: 185000,
-    totalLances: 3,
-    bids: [
-      { bidder: 'Carlos M.', valor: 185000, time: '14:32' },
-      { bidder: 'Ana S.', valor: 182000, time: '14:28' },
-      { bidder: 'Pedro L.', valor: 180000, time: '14:20' },
-    ],
-    tempoRestante: 7200,
-    status: 'ativo',
-  },
-  {
-    id: 3,
-    marca: 'Honda',
-    modelo: 'CB 500',
-    ano: 2022,
-    placa: 'GHI-9012',
-    cor: 'Preto',
-    tipo: 'Moto',
-    valorMinimo: 28000,
-    descricao: 'Moto em excelente estado, sem sinistro. Pneus novos, revisão feita.',
-    lanceAtual: 31500,
-    totalLances: 5,
-    bids: [
-      { bidder: 'Lucas R.', valor: 31500, time: '15:10' },
-      { bidder: 'Mariana T.', valor: 30000, time: '15:05' },
-      { bidder: 'João B.', valor: 29500, time: '15:01' },
-      { bidder: 'Fernanda C.', valor: 29000, time: '14:55' },
-      { bidder: 'Roberto A.', valor: 28500, time: '14:48' },
-    ],
-    tempoRestante: 540,
-    status: 'ativo',
-  },
-  {
-    id: 4,
-    marca: 'Volkswagen',
-    modelo: 'Polo',
-    ano: 2019,
-    placa: 'JKL-3456',
-    cor: 'Vermelho',
-    tipo: 'Carro',
-    valorMinimo: 55000,
-    descricao: 'Hatch compacto com câmbio automático. Único dono.',
-    lanceAtual: 60000,
-    totalLances: 2,
-    bids: [
-      { bidder: 'Beatriz F.', valor: 60000, time: '10:45' },
-      { bidder: 'Rafael D.', valor: 57000, time: '10:30' },
-    ],
-    tempoRestante: 0,
-    status: 'encerrado',
-  },
-];
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import {
+  INITIAL_VEHICLES,
+  enviarLance,
+  listarLotes,
+} from '../services/leilaoService';
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
 const formatCurrency = (value) =>
@@ -128,6 +55,7 @@ const getTimerColor = (seconds) => {
 // ── Componente Principal ──────────────────────────────────────────────────────
 export default function LanceLeilao() {
   const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
+  const [isOnline, setIsOnline] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [bidderName, setBidderName] = useState('');
   const [bidValue, setBidValue] = useState('');
@@ -136,6 +64,20 @@ export default function LanceLeilao() {
 
   // Veículo atualmente selecionado (derivado do estado)
   const selectedVehicle = vehicles.find((v) => v.id === selectedId) ?? null;
+
+  // ── Carregar lotes do microsserviço ─────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    listarLotes().then(({ data, isOnline }) => {
+      if (mounted) {
+        setVehicles(data);
+        setIsOnline(isOnline);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // ── Cronômetro regressivo ─────────────────────────────────────────────────
   useEffect(() => {
@@ -165,7 +107,7 @@ export default function LanceLeilao() {
   };
 
   // ── Registrar Lance ───────────────────────────────────────────────────────
-  const handleBid = () => {
+  const handleBid = async () => {
     if (!selectedVehicle) return;
 
     if (selectedVehicle.status === 'encerrado') {
@@ -179,21 +121,37 @@ export default function LanceLeilao() {
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const valorLance = Number(bidValue);
 
-    const newBid = { bidder: bidderName.trim(), valor: valorLance, time: timeStr };
+    // Enviar lance ao microsserviço
+    const result = await enviarLance(selectedId, { bidder: bidderName.trim(), valor: valorLance });
 
-    setVehicles((prev) =>
-      prev.map((v) =>
-        v.id === selectedId
-          ? { ...v, lanceAtual: valorLance, totalLances: v.totalLances + 1, bids: [newBid, ...v.bids] }
-          : v
-      )
-    );
+    if (result.isOnline && result.data) {
+      // Atualizar com a resposta oficial do microsserviço
+      setVehicles((prev) =>
+        prev.map((v) => (v.id === selectedId ? result.data : v))
+      );
+      setIsOnline(true);
+      setSnackbar({
+        open: true,
+        message: `Lance de ${formatCurrency(valorLance)} registrado no Microsserviço de Leilão (:8082)!`,
+        severity: 'success',
+      });
+    } else {
+      // Fallback local
+      const newBid = { bidder: bidderName.trim(), valor: valorLance, time: timeStr };
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v.id === selectedId
+            ? { ...v, lanceAtual: valorLance, totalLances: v.totalLances + 1, bids: [newBid, ...v.bids] }
+            : v
+        )
+      );
+      setSnackbar({
+        open: true,
+        message: `Lance de ${formatCurrency(valorLance)} registrado no estado local (Modo Demonstração).`,
+        severity: 'info',
+      });
+    }
 
-    setSnackbar({
-      open: true,
-      message: `Lance de ${formatCurrency(valorLance)} registrado com sucesso!`,
-      severity: 'success',
-    });
     setBidValue('');
     setErrors({});
   };
@@ -209,17 +167,37 @@ export default function LanceLeilao() {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       {/* Cabeçalho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4, flexWrap: 'wrap' }}>
-        <GavelIcon color="secondary" sx={{ fontSize: 36 }} />
-        <Typography variant="h4" fontWeight="bold" color="text.primary">
-          Leilão de Veículos
-        </Typography>
-        <Chip
-          label="● AO VIVO"
-          color="error"
-          size="small"
-          sx={{ animation: 'pulse 1.5s infinite', fontWeight: 700 }}
-        />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <GavelIcon color="secondary" sx={{ fontSize: 36 }} />
+          <Typography variant="h4" fontWeight="bold" color="text.primary">
+            Leilão de Veículos
+          </Typography>
+          <Chip
+            label="● AO VIVO"
+            color="error"
+            size="small"
+            sx={{ fontWeight: 'bold', animation: 'pulse 2s infinite' }}
+          />
+        </Box>
+
+        <Tooltip
+          title={
+            isOnline
+              ? 'Conectado diretamente à API REST leilao-service (:8082)'
+              : 'Microsserviço offline — operando com dados mock locais'
+          }
+          arrow
+        >
+          <Chip
+            icon={isOnline ? <CloudDoneIcon fontSize="small" /> : <CloudOffIcon fontSize="small" />}
+            label={isOnline ? 'Microsserviço REST :8082 Online' : 'Modo Fallback Offline'}
+            color={isOnline ? 'success' : 'default'}
+            variant={isOnline ? 'filled' : 'outlined'}
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+        </Tooltip>
       </Box>
 
       <Grid container spacing={3}>
