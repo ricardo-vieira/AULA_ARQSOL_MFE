@@ -94,7 +94,7 @@ async function deploy() {
   console.log('\n====================================================');
   console.log('🎉 DEPLOY CONCLUÍDO COM SUCESSO!');
   console.log('🌐 Acesse o leilão em:');
-  console.log('👉 https://leilaoveiculos.z15.web.core.windows.net/');
+  console.log('👉 https://autoleilao.z15.web.core.windows.net/');
   console.log('====================================================\n');
 }
 

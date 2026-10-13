@@ -7,6 +7,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
+function cleanDir(dir) {
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+cleanDir(path.join(rootDir, 'shell', 'dist'));
+
 console.log('====================================================');
 console.log('🚀 [ETAPA 1/3] Compilando os Microfrontends (Remotes)');
 console.log('====================================================\n');
@@ -25,6 +33,7 @@ function copyFederationAssets(mfeName) {
   const srcDir = path.join(rootDir, mfeName, 'dist', 'assets');
   const destDir = path.join(rootDir, 'shell', 'public', mfeName, 'assets');
 
+  cleanDir(destDir);
   fs.mkdirSync(destDir, { recursive: true });
 
   const files = fs.readdirSync(srcDir);
