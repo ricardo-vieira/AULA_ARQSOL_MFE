@@ -1,6 +1,6 @@
 // Serviço de integração REST direta com o microsserviço de Veículos (:8081)
 // Conexão direta MFE -> Microsserviço via REST API (com fallback offline para dados mock)
-const API_BASE_URL = import.meta.env?.VITE_VEICULOS_API_URL || 'http://localhost:8081';
+const API_BASE_URL = import.meta.env?.VITE_VEICULOS_API_URL || 'http://localhost:8080';
 const API_URL = `${API_BASE_URL}/api/veiculos`;
 
 export const INITIAL_VEHICLES = [
