@@ -63,7 +63,7 @@ Implementar uma plataforma web de leilão de veículos utilizando arquitetura de
 
  Incluir README.md detalhado com: visão geral, diagrama de arquitetura ASCII, stack tecnológica, estrutura de pastas, passo a passo de execução (4 passos), fluxo do Module Federation, funcionalidades e conceitos demonstrados.
 
- Incluir SPEC.md com: contexto acadêmico, prompt base para reprodução, diagrama de arquitetura, dependências, checklist de avaliação e troubleshooting.
+ Incluir SPEC.md com: contexto acadêmico, diagrama de arquitetura, dependências, checklist de avaliação e troubleshooting.
 
 ---
 
