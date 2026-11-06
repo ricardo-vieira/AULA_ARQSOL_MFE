@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@azure/storage-blob": "^12.34.0",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "dependency-cruiser": "^18.7.0"
   }
 }

@@ -58,7 +58,7 @@ async function deploy() {
     process.exit(1);
   }
 
-  console.log('🔌 Conectando ao Azure Storage Account (leilaoveiculos)...');
+  console.log('🔌 Conectando ao Azure Storage Account...');
   const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
   const containerClient = blobServiceClient.getContainerClient(containerName);
 
